@@ -237,7 +237,7 @@ export default function WatchPageClient({ movie, posterUrl, tmdbData, seasonData
     const extendedEps = getExtendedEpisodes();
     
     setEpisodes(extendedEps);
-    // Luôn chọn server đầu tiên (đã sắp xếp theo thứ tự ưu tiên: PhimAPI > Ophim)
+    // Luôn chọn server đầu tiên (đã sắp xếp theo thứ tự ưu tiên: PhimAPI > Nguồn C > Ophim)
     // khi mở phim mới, trừ phi được phục hồi từ lịch sử xem của chính phim này.
     setCurrentServerIndex(0);
     setSelectedServerIndex(0);

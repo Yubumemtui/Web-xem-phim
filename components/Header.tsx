@@ -3,7 +3,7 @@
 import { useState, useEffect, FormEvent, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, Menu, X, Filter, Clock, Download, LogOut, User, Heart } from "lucide-react";
+import { Search, Menu, X, Filter, Clock, Download, LogOut, User, Heart, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Movie } from "@/types/api";
 import { getPosterUrl, searchPhim } from "@/lib/api";
@@ -219,6 +219,10 @@ export default function Header() {
             <Link href="/filter" className="text-sm font-medium text-zinc-300 hover:text-[var(--color-cyan-neon)] hover:drop-shadow-[0_0_8px_var(--color-cyan-neon)] transition-all flex items-center gap-1.5">
               <Filter size={16} />
               Bộ lọc
+            </Link>
+            <Link href="/kham-pha" className="text-sm font-medium text-zinc-300 hover:text-[var(--color-cyan-neon)] hover:drop-shadow-[0_0_8px_var(--color-cyan-neon)] transition-all flex items-center gap-1.5">
+              <Sparkles size={16} />
+              Khám phá
             </Link>
             {(isInstallable || isIos) && (
               <button
@@ -441,6 +445,10 @@ export default function Header() {
               <Link href="/filter" className="px-4 py-3 rounded-lg text-sm font-medium text-zinc-200 hover:bg-white/10 transition-colors flex items-center gap-2">
                 <Filter size={18} />
                 Bộ lọc
+              </Link>
+              <Link href="/kham-pha" className="px-4 py-3 rounded-lg text-sm font-medium text-zinc-200 hover:bg-white/10 transition-colors flex items-center gap-2">
+                <Sparkles size={18} />
+                Khám phá
               </Link>
               <Link href="/ca-nhan?tab=history" onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 rounded-lg text-sm font-medium text-zinc-200 hover:bg-white/10 transition-colors flex items-center gap-2">
                 <Clock size={18} />

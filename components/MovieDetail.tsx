@@ -217,6 +217,15 @@ export default function MovieDetail({
       ? `${tmdbBackdropBase}${tmdbBackdropFile}`
       : null;
   }
+  // Mặc định ưu tiên ảnh TMDB (nét hơn ảnh PhimAPI) khi có sẵn — chỉ set 1 lần khi data về
+  const didInitImageSource = useRef(false);
+  useEffect(() => {
+    if (didInitImageSource.current) return;
+    if (!tmdbBackdropUrl && !tmdbPosterUrl) return;
+    didInitImageSource.current = true;
+    if (tmdbBackdropUrl) setBackdropSource(1);
+    if (tmdbPosterUrl) setPosterSource(1);
+  }, [tmdbBackdropUrl, tmdbPosterUrl]);
   // Determine available options
   const hasAltBackdrop = Boolean(
     altPosterUrl && altPosterUrl !== primaryPosterUrl,
@@ -224,20 +233,22 @@ export default function MovieDetail({
   const hasAltPoster = Boolean(altThumbUrl && altThumbUrl !== primaryThumbUrl);
   const availableBackdrops = [primaryPosterUrl];
   const backdropNames = ["PhimAPI"];
-  if (tmdbBackdropUrl) {
+  if (tmdbBackdropUrl && tmdbBackdropUrl !== primaryPosterUrl) {
     availableBackdrops.push(tmdbBackdropUrl);
     backdropNames.push("TMDB");
   }
-  if (movie.alt_thumb_url && movie.alt_thumb_url !== movie.thumb_url) {
+  if (altThumbUrl && altThumbUrl !== primaryPosterUrl && altThumbUrl !== tmdbBackdropUrl) {
+    availableBackdrops.push(altThumbUrl);
     backdropNames.push("Dự phòng");
   }
   const availablePosters = [primaryThumbUrl];
   const posterNames = ["PhimAPI"];
-  if (tmdbPosterUrl) {
+  if (tmdbPosterUrl && tmdbPosterUrl !== primaryThumbUrl) {
     availablePosters.push(tmdbPosterUrl);
     posterNames.push("TMDB");
   }
-  if (movie.alt_poster_url && movie.alt_poster_url !== movie.poster_url) {
+  if (altPosterUrl && altPosterUrl !== primaryThumbUrl && altPosterUrl !== tmdbPosterUrl) {
+    availablePosters.push(altPosterUrl);
     posterNames.push("Dự phòng");
   }
   // Current active images

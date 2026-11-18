@@ -20,5 +20,5 @@ export const MOVIE_SOURCES = {
 };
 
 // Đặt PhimAPI làm Nguồn chính (Primary Source) để có ảnh WEBP siêu nhẹ và metadata chuẩn.
-// Nguồn C sẽ đóng vai trò dự phòng và ưu tiên tốc độ stream video trong trang xem phim.
+// Thứ tự ưu tiên khi xem: PhimAPI -> Nguồn C -> Ophim (xem sortEpisodes trong lib/api.ts).
 export const PRIMARY_SOURCE = MOVIE_SOURCES.PHIMAPI;

@@ -298,9 +298,9 @@ export function getCleanServerName(rawName: string | undefined): string {
 export function sortEpisodes(eps: any[]): any[] {
   if (!eps) return [];
   const priority: Record<string, number> = {
-    nguonc: 3,
-    phimapi: 2,
-    kkphim: 2,
+    phimapi: 3,
+    kkphim: 3,
+    nguonc: 2,
     ophim: 1
   };
   

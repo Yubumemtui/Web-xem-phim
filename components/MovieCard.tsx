@@ -20,13 +20,25 @@ interface MovieCardProps {
 const getYoutubeEmbedUrl = (url: string) => {
   if (!url) return null;
   let videoId = "";
-  if (url.includes("youtube.com/watch?v=")) {
-    videoId = url.split("v=")[1].split("&")[0];
-  } else if (url.includes("youtu.be/")) {
-    videoId = url.split("youtu.be/")[1].split("?")[0];
+  const patterns = [
+    /(?:youtube\.com\/(?:watch\?[^#]*v=|embed\/|shorts\/|live\/|v\/))([\w-]{11})/,
+    /youtu\.be\/([\w-]{11})/,
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) {
+      videoId = m[1];
+      break;
+    }
+  }
+  const trimmed = url.trim();
+  if (!videoId && /^[\w-]{11}$/.test(trimmed)) {
+    videoId = trimmed;
   }
   if (!videoId) return null;
-  return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=0&modestbranding=1&loop=1&playlist=${videoId}&playsinline=1&vq=hd1080`;
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "";
+  return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&loop=1&playlist=${videoId}&playsinline=1&iv_load_policy=3&disablekb=1&fs=0${origin ? `&origin=${encodeURIComponent(origin)}` : ""}`;
 };
 
 const MovieCard = memo(function MovieCard({ movie, posterUrl, href, isHistory, priority = false }: MovieCardProps) {
@@ -92,13 +104,13 @@ const MovieCard = memo(function MovieCard({ movie, posterUrl, href, isHistory, p
               setThumbImageUrl(data.movie.thumb_url);
             }
           } else {
-            // Desktop: Ưu tiên Trailer, nếu không có thì lấy ảnh Thumb
-            if (data.movie?.trailer_url) {
-              const embed = getYoutubeEmbedUrl(data.movie.trailer_url);
-              if (embed) {
-                setTrailerUrl(embed);
-                setThumbImageUrl(null);
-              }
+            // Desktop: Ưu tiên Trailer, nếu không có/không parse được thì lấy ảnh Thumb
+            const trailerEmbed = data.movie?.trailer_url
+              ? getYoutubeEmbedUrl(data.movie.trailer_url)
+              : null;
+            if (trailerEmbed) {
+              setTrailerUrl(trailerEmbed);
+              setThumbImageUrl(null);
             } else if (data.movie?.thumb_url) {
               setThumbImageUrl(data.movie.thumb_url);
               setTrailerUrl(null);
@@ -375,7 +387,9 @@ const MovieCard = memo(function MovieCard({ movie, posterUrl, href, isHistory, p
               <iframe
                 src={trailerUrl}
                 className="w-full h-full pointer-events-none opacity-100"
-                allow="autoplay; encrypted-media"
+                allow="autoplay; encrypted-media; picture-in-picture"
+                referrerPolicy="strict-origin-when-cross-origin"
+                title="Trailer"
               />
             ) : (
               thumbImageUrl && (

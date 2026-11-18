@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, SlidersHorizontal, ChevronUp, Filter } from "lucide-react";
+import { X, SlidersHorizontal, ChevronDown, ChevronUp, Filter, RotateCcw } from "lucide-react";
 import type { Genre, Country } from "@/types/api";
 
 const NAM_PHAT_HANH = Array.from({ length: 30 }, (_, i) => 2024 - i).map(year => ({ name: year.toString(), slug: year.toString() }));
@@ -44,6 +44,7 @@ interface FilterPanelProps {
     phienBan?: string;
     danhSach?: string;
     sortField?: string;
+    sortType?: string;
   };
   onFilterChange: (filters: {
     theLoai?: string;
@@ -53,45 +54,65 @@ interface FilterPanelProps {
     phienBan?: string;
     danhSach?: string;
     sortField?: string;
+    sortType?: string;
   }) => void;
 }
 
+type FilterState = {
+  theLoaiSlug?: string;
+  quocGiaSlug?: string;
+  year?: string;
+  loaiPhim?: string;
+  phienBan?: string;
+  danhSach?: string;
+  sortField?: string;
+  sortType?: string;
+};
+
+type FilterKey = keyof FilterState;
+
+interface FilterSection {
+  title: string;
+  type: FilterKey;
+  items: { name: string; slug: string }[];
+  isAccordion?: boolean;
+  multi?: boolean;
+}
+
 export default function FilterPanel({ theLoaiList, quocGiaList, initialFilters, onFilterChange }: FilterPanelProps) {
-  const [selectedFilters, setSelectedFilters] = useState<{
-    theLoaiSlug?: string;
-    quocGiaSlug?: string;
-    year?: string;
-    loaiPhim?: string;
-    phienBan?: string;
-    danhSach?: string;
-    sortField?: string;
-  }>({});
+  const [selectedFilters, setSelectedFilters] = useState<FilterState>({});
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isDesktopOpen, setIsDesktopOpen] = useState(true);
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set(['danhSach', 'quocGia', 'theLoai']));
 
   useEffect(() => {
     if (initialFilters) {
       setSelectedFilters(initialFilters);
     }
-  }, [
-    initialFilters?.theLoaiSlug,
-    initialFilters?.quocGiaSlug,
-    initialFilters?.year,
-    initialFilters?.loaiPhim,
-    initialFilters?.phienBan,
-    initialFilters?.danhSach,
-    initialFilters?.sortField
-  ]);
+  }, [initialFilters]);
 
   const handleFilterSelect = (
-    type: keyof typeof selectedFilters,
-    value: string
+    type: FilterKey,
+    value: string,
+    multi: boolean = false
   ) => {
-    const newVal = selectedFilters[type] === value ? undefined : value;
-    const newFilters = {
-      ...selectedFilters,
-      [type]: newVal,
-    };
+    let newFilters: FilterState;
+    if (multi) {
+      const current = (selectedFilters[type] || "").split(",").filter(Boolean);
+      const next = current.includes(value)
+        ? current.filter((s) => s !== value)
+        : [...current, value];
+      newFilters = {
+        ...selectedFilters,
+        [type]: next.length > 0 ? next.join(",") : undefined,
+      };
+    } else {
+      const newVal = selectedFilters[type] === value ? undefined : value;
+      newFilters = {
+        ...selectedFilters,
+        [type]: newVal,
+      };
+    }
     setSelectedFilters(newFilters);
     
     onFilterChange({
@@ -102,6 +123,7 @@ export default function FilterPanel({ theLoaiList, quocGiaList, initialFilters, 
       phienBan: newFilters.phienBan,
       danhSach: newFilters.danhSach,
       sortField: newFilters.sortField,
+      sortType: newFilters.sortType,
     });
   };
 
@@ -114,91 +136,232 @@ export default function FilterPanel({ theLoaiList, quocGiaList, initialFilters, 
     (value) => value !== undefined
   );
 
-  const activeCount = Object.values(selectedFilters).filter(
-    (v) => v !== undefined
-  ).length;
+  const activeCount = Object.entries(selectedFilters).reduce((sum, [key, value]) => {
+    if (!value) return sum;
+    if (key === "theLoaiSlug" || key === "quocGiaSlug") {
+      return sum + value.split(",").filter(Boolean).length;
+    }
+    return sum + 1;
+  }, 0);
 
-  const renderFilterGroup = (
-    title: string,
-    type: keyof typeof selectedFilters,
-    items: { name: string; slug: string }[]
-  ) => {
+  const toggleSection = (sectionKey: string) => {
+    const newOpen = new Set(openSections);
+    if (newOpen.has(sectionKey)) {
+      newOpen.delete(sectionKey);
+    } else {
+      newOpen.add(sectionKey);
+    }
+    setOpenSections(newOpen);
+  };
+
+  const renderFilterSection = (section: FilterSection) => {
+    const isOpen = openSections.has(section.type);
+    const selectedValues = (selectedFilters[section.type] || "")
+      .split(",")
+      .filter(Boolean);
+    const selectionCount = selectedValues.length;
+    const hasSelection = selectionCount > 0;
+
     return (
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <span className="font-semibold text-gray-700 dark:text-gray-200 text-sm sm:text-base">{title}</span>
-        </div>
-        <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center">
-          {items.map((item) => (
-            <button
-              key={item.slug}
-              onClick={() => handleFilterSelect(type, item.slug)}
-              className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs sm:text-sm rounded-md transition-all ${
-                selectedFilters[type] === item.slug
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
-              }`}
-            >
-              {item.name}
-            </button>
-          ))}
-        </div>
+      <div key={section.type} className="border-b border-gray-200 dark:border-gray-700 last:border-0">
+        <button
+          onClick={() => toggleSection(section.type)}
+          className="w-full flex items-center justify-between py-3 px-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              {section.title}
+            </span>
+            {hasSelection && (
+              <span className="px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[10px] font-semibold">
+                {selectionCount}
+              </span>
+            )}
+          </div>
+          <ChevronDown 
+            className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
+          />
+        </button>
+        
+        {isOpen && (
+          <div className="px-4 pb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {section.items.map((item) => {
+                const isSelected = selectedValues.includes(item.slug);
+                return (
+                  <button
+                    key={item.slug}
+                    onClick={() => handleFilterSelect(section.type, item.slug, section.multi)}
+                    className={`text-xs sm:text-sm py-2 px-3 rounded-lg border transition-all duration-200 text-left ${
+                      isSelected
+                        ? 'bg-blue-500 border-blue-500 text-white shadow-md shadow-blue-500/20'
+                        : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400'
+                    }`}
+                  >
+                    {item.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-5">
-      {/* Header row */}
-      <div className="flex items-center justify-between gap-2 border-b dark:border-gray-700 pb-3 mb-4">
-        <div className="flex items-center gap-2 min-w-0">
-          <button
-            className="lg:hidden flex items-center gap-1.5 px-3 py-2 rounded-md bg-blue-500 text-white text-sm font-medium transition-colors active:bg-blue-600"
-            onClick={() => setIsMobileOpen(!isMobileOpen)}
-          >
-            {isMobileOpen ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <SlidersHorizontal className="w-4 h-4" />
+  const renderSortSection = () => {
+    const isOpen = openSections.has('sortField');
+    const hasSelection = selectedFilters.sortField !== undefined;
+
+    return (
+      <div className="border-b border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => toggleSection('sortField')}
+          className="w-full flex items-center justify-between py-3 px-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              Sắp xếp
+            </span>
+            {hasSelection && (
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
             )}
-            <span>{isMobileOpen ? "Ẩn bộ lọc" : "Bộ lọc"}</span>
-            {activeCount > 0 && (
-              <span className="ml-1 bg-white text-blue-600 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                {activeCount}
-              </span>
-            )}
-          </button>
-          <button
-            className="hidden lg:flex items-center gap-2 text-xl font-bold text-gray-800 dark:text-white cursor-pointer hover:text-blue-500 transition-colors"
-            onClick={() => setIsDesktopOpen(!isDesktopOpen)}
-          >
-            <Filter className="w-5 h-5 text-blue-500" /> Bộ Lọc Phim
-            {isDesktopOpen ? <ChevronUp className="w-5 h-5 ml-1 text-gray-500" /> : <SlidersHorizontal className="w-5 h-5 ml-1 text-gray-500" />}
-          </button>
-        </div>
-        {hasActiveFilters && (
-          <button
-            onClick={clearAllFilters}
-            className="text-sm text-red-500 hover:text-red-700 transition-colors whitespace-nowrap font-medium"
-          >
-            Xóa tất cả
-          </button>
+          </div>
+          <ChevronDown 
+            className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
+          />
+        </button>
+        
+        {isOpen && (
+          <div className="px-4 pb-4">
+            <div className="space-y-2">
+              {SAP_XEP_LIST.map((item) => {
+                const isSelected = selectedFilters.sortField === item.slug;
+                const isDesc = selectedFilters.sortType === 'desc' || (!selectedFilters.sortType && isSelected);
+                
+                return (
+                  <div key={item.slug} className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const newSortField = selectedFilters.sortField === item.slug ? undefined : item.slug;
+                        const newSortType = newSortField ? (selectedFilters.sortType === 'desc' ? 'asc' : 'desc') : undefined;
+                        const newFilters = {
+                          ...selectedFilters,
+                          sortField: newSortField,
+                          sortType: newSortType
+                        };
+                        setSelectedFilters(newFilters);
+                        onFilterChange({
+                          theLoai: newFilters.theLoaiSlug,
+                          quocGia: newFilters.quocGiaSlug,
+                          year: newFilters.year,
+                          loaiPhim: newFilters.loaiPhim,
+                          phienBan: newFilters.phienBan,
+                          danhSach: newFilters.danhSach,
+                          sortField: newSortField,
+                          sortType: newSortType
+                        });
+                      }}
+                      className={`flex-1 text-left py-2.5 px-3 rounded-lg border transition-all duration-200 text-sm ${
+                        isSelected
+                          ? 'bg-blue-500 border-blue-500 text-white shadow-md shadow-blue-500/20'
+                          : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400'
+                      }`}
+                    >
+                      {item.name}
+                    </button>
+                    {isSelected && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newSortType = selectedFilters.sortType === 'desc' ? 'asc' : 'desc';
+                          const newFilters = {
+                            ...selectedFilters,
+                            sortType: newSortType
+                          };
+                          setSelectedFilters(newFilters);
+                          onFilterChange({
+                            theLoai: newFilters.theLoaiSlug,
+                            quocGia: newFilters.quocGiaSlug,
+                            year: newFilters.year,
+                            loaiPhim: newFilters.loaiPhim,
+                            phienBan: newFilters.phienBan,
+                            danhSach: newFilters.danhSach,
+                            sortField: newFilters.sortField,
+                            sortType: newSortType
+                          });
+                        }}
+                        className="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                        title={isDesc ? "Cũ nhất" : "Mới nhất"}
+                      >
+                        {isDesc ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
+    );
+  };
 
-      {/* Filter sections */}
-      <div
-        className={`space-y-5 overflow-y-auto max-h-[70vh] lg:max-h-none lg:overflow-visible ${
-          isMobileOpen ? "block" : "hidden"
-        } ${isDesktopOpen ? "lg:block" : "lg:hidden"}`}
-      >
-        {renderFilterGroup("Danh sách", "danhSach", DANH_SACH_LIST)}
-        {renderFilterGroup("Quốc gia", "quocGiaSlug", quocGiaList)}
-        {renderFilterGroup("Thể loại", "theLoaiSlug", theLoaiList)}
-        {renderFilterGroup("Phiên bản", "phienBan", PHIEN_BAN_LIST)}
-        {renderFilterGroup("Năm phát hành", "year", NAM_PHAT_HANH)}
-        {renderFilterGroup("Sắp xếp", "sortField", SAP_XEP_LIST)}
+  const sections: FilterSection[] = [
+    { title: "Danh sách", type: "danhSach", items: DANH_SACH_LIST },
+    { title: "Quốc gia", type: "quocGiaSlug", items: quocGiaList, multi: true },
+    { title: "Thể loại", type: "theLoaiSlug", items: theLoaiList, multi: true },
+    { title: "Phiên bản", type: "phienBan", items: PHIEN_BAN_LIST },
+    { title: "Năm phát hành", type: "year", items: NAM_PHAT_HANH },
+  ];
 
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+      {/* Header */}
+      <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 z-10">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <Filter className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">Bộ lọc</h3>
+              {activeCount > 0 && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">{activeCount} bộ lọc đang hoạt động</p>
+              )}
+            </div>
+          </div>
+          {hasActiveFilters && (
+            <button
+              onClick={clearAllFilters}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span className="hidden sm:inline">Đặt lại</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile Toggle */}
+      <div className="lg:hidden border-b border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => setIsMobileOpen(!isMobileOpen)}
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        >
+          <span className="text-sm font-medium text-gray-900 dark:text-white">
+            {isMobileOpen ? 'Ẩn bộ lọc' : 'Hiện bộ lọc'}
+          </span>
+          <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isMobileOpen ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
+
+      {/* Filter Sections */}
+      <div className={`max-h-[60vh] lg:max-h-none overflow-y-auto lg:overflow-visible ${
+        isMobileOpen ? 'block' : 'hidden lg:block'
+      }`}>
+        {sections.map(renderFilterSection)}
+        {renderSortSection()}
       </div>
     </div>
   );

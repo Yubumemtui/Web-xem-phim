@@ -48,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://img.ophim.live" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://ophim1.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://image.tmdb.org" crossOrigin="anonymous" />
+        <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="min-h-full flex flex-col bg-black text-white font-sans">
         <Providers>
